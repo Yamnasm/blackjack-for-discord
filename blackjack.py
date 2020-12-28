@@ -2,9 +2,9 @@ import random
 import time
 
 class User:
-    def __init__(self, name, bank=1000):
+    def __init__(self, name, chips=1000):
         self.name = name
-        self.bank = bank
+        self.chips = chips
         self.bet  = 0
         self.hand = []
         self.status = ""
@@ -12,17 +12,12 @@ class User:
     def __repr__(self):
         return self.name
 
-    def set_bet(self, a):
-        if a <= self.bank:
-            self.bet = a
-            self.bank -= self.bet
-        else:
-            raise Exception("Insufficiant funds.")
-
 class Dealer:
     def __init__(self):
         self.hand = []
         self.status = ""
+    def __repr__(self):
+        return "Dealer"
 
 class Deck:
     def __init__(self):
@@ -37,10 +32,10 @@ class Deck:
             return self.cards.pop()
 
 class Game:
-    def __init__(self, min_bet=100, max_bet=1000):
+    def __init__(self, min_bet=100, max_bet=5000):
         self.min_bet = min_bet
         self.max_bet = max_bet
-        self.players = []    
+        self.players = []
 
     def __repr__(self):
         return f"Game Started! Min bet: {self.min_bet}. Max bet: {self.max_bet}."    
@@ -51,8 +46,14 @@ class Game:
     def place_bet(self, player):
         amount = int(input(f"{player} enter a bet: \n"))
         if amount <= self.max_bet and amount >= self.min_bet:
-            player.set_bet(amount)
+            if amount <= player.chips:
+                player.bet = amount
+                player.chips -= amount
+            else:
+                print("Insufficient chips to bet.")
+                self.place_bet(player)
         else:
+            print("Bet not within table limits.")
             self.place_bet(player)
     
     def hand_value(self, hand):
@@ -71,6 +72,19 @@ class Game:
             if card == "A" and value > 21:
                 value -= 10
         return value
+
+    def print_hand(self, target):
+        hand = target.hand
+        value = self.hand_value(hand)
+        if len(hand) == 2 and value == 21:
+            blackjack = " Blackjack!"
+        else:
+            blackjack = ""
+        if value > 21:
+            bust = " Busted!"
+        else:
+            bust = ""
+        return f"{target} hand: {hand}. Value: {value}.{blackjack}{bust}"
     
     def play(self):
         self.add_players(User("kat"), User("yamn"))
@@ -87,7 +101,7 @@ class Game:
 
             for p in self.players:
                 p.hand.extend((deck.deal(), deck.deal()))
-                print(f"{p} hand: {p.hand}, value: {self.hand_value(p.hand)}{'. Blackjack!' if self.hand_value(p.hand) == 21 else ''}")
+                print(self.print_hand(p))
             
             for p in self.players:
 
@@ -95,18 +109,20 @@ class Game:
                     p.status = "blackjack"
                     continue
             
-                # being able to double incorrectly is only an issue on commandline
-                p.status = input(f"{p}: surrender / hit / double / stay: \n")
+                # being able to double without adequate chips is only an issue on commandline
+                p.status = input(f"{p}: surrender / hit {'/ double ' if p.bet <= p.chips else ''}/ stay: \n")
 
                 if p.status == "surrender":
                     continue # half money is returned during rewawrd phase
+
                 elif p.status == "stay":
                     continue
+
                 elif p.status == "double":
-                    p.set_bet(p.bet)
+                    p.chips -= p.bet
                     p.bet = p.bet * 2
                     p.hand.append(deck.deal())
-                    print(f"{p} hand: {p.hand}, value: {self.hand_value(p.hand)}{'. busted!' if self.hand_value(p.hand) > 21 else ''}")
+                    print(self.print_hand(p))
 
                     if self.hand_value(p.hand) > 21:
                         p.status = "bust"
@@ -114,40 +130,53 @@ class Game:
                 if p.status == "hit":
                     while p.status == "hit":
                         p.hand.append(deck.deal())
-                        print(f"{p} hand: {p.hand}, value: {self.hand_value(p.hand)}{'. busted!' if self.hand_value(p.hand) > 21 else ''}")
+                        print(self.print_hand(p))
                         if self.hand_value(p.hand) > 21:
                             p.status = "bust"
                             continue
+                        elif self.hand_value(p.hand) == 21:
+                            print(f"{p} stays.")
+                            p.status = "stay"
                         else:
                             p.status = input(f"{p}: hit / stay: \n")
                             if p.status == "stay":
                                 continue
 
-            print(f"Dealer hand: {dealer.hand}, value: {self.hand_value(dealer.hand)}")
+            print(self.print_hand(dealer))
+            while self.hand_value(dealer.hand) < 17:
+                print("Dealer hits.")
+                dealer.hand.append(deck.deal())
+                print(self.print_hand(dealer))
+                if self.hand_value(dealer.hand) > 21:
+                    dealer.status = "bust"
 
             for p in self.players:
-                if p.status != "surrender" and p.status != "bust":
+                if p.status == "bust":
+                    pass
+                elif p.status == "surrender":
+                    pass
+                elif p.status != "surrender" and p.status != "bust" and dealer.status != "bust":
                     if self.hand_value(dealer.hand) > self.hand_value(p.hand):
                         print(f"{p} lost to the dealer...")
                     elif self.hand_value(dealer.hand) == self.hand_value(p.hand):
                         print(f"{p} matched the dealer.")
-                        p.bank += p.bet
+                        p.chips += p.bet
                     else:
                         print(f"{p} beat the dealer!")
-                        p.bank += p.bet * 2
-                elif p.status == "bust":
-                    print(f"{p} busted...")
-                elif p.status == "surrender":
-                    print(f"{p} surrendered...")
-                    p.bank += int(p.bet / 2)
+                        p.chips += p.bet * 2
+                elif dealer.status == "bust":
+                    print(f"{p} beat the dealer!")
+                    p.chips += p.bet * 2
                 p.bet = 0 # bet is reset regardless of outcome
                 p.hand = []
             dealer.hand = []
 
             for p in self.players:
-                print(f"{p}: Bank: {p.bank}")
+                print(f"{p}: chips: {p.chips}")
+            
+            if input(f"Continue? Y/N \n").lower() == "n":
+                gameloop = False
         
-
 if __name__ == "__main__":
     deck = Deck()
     game = Game()
