@@ -1,0 +1,79 @@
+create and shuffle deck
+
+for players in game
+    ask player for bet
+    if bet valid
+        submit bet
+    else
+        ask again
+
+deal two cards to dealer (one hidden)
+
+for players in game
+    deal two cards to player
+
+for players in game
+    if cards blackjack
+        if dealer cards not 10 or 11
+            reward player (bet + 150% of bet)
+        if dealer cards 10 or 11
+            continue
+
+    loop
+        if has_hit
+            don't ask surrender
+            don't ask double down
+            don't ask split
+        else
+            ask player all options
+
+        if player hits
+            set has_hit
+            deal card to player
+            check player cards
+            if cards valid
+                continue
+            else
+                bust player
+
+        if player surrenders
+            take away half of players bet
+            return the rest of the players bet
+            bust player
+
+        if player stays
+            submit player score
+
+        if player doubles down
+            if player bank has twice the amount of bet or more
+                automatically bet player twice amount
+                deal card to player
+                check player cards
+                if cards valid
+                    continue
+                else
+                    bust player
+        if player splits
+            tell them to fuck off
+        else
+            ask player again
+
+automate dealer actions
+
+for players in game
+    if player value less than dealer value
+        bust player
+
+    if player value equal to dealer value
+        bust player (keep bettings)
+
+    if player value greater than dealer value
+        reward player (twice bettings)
+
+    if dealer value blackjack and player value blackjack
+        bust player (keep bettings)
+
+    if dealer value blackjack and player value not blackjack
+        bust player
+
+END
