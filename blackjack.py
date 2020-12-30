@@ -123,6 +123,7 @@ class Game:
                     p.bet = p.bet * 2
                     p.hand.append(deck.deal())
                     print(self.print_hand(p))
+                    p.status = "stay"
 
                     if self.hand_value(p.hand) > 21:
                         p.status = "bust"
@@ -143,13 +144,17 @@ class Game:
                                 continue
 
             print(self.print_hand(dealer))
-            while self.hand_value(dealer.hand) < 17:
-                print("Dealer hits.")
-                dealer.hand.append(deck.deal())
-                print(self.print_hand(dealer))
-                if self.hand_value(dealer.hand) > 21:
-                    dealer.status = "bust"
+            for p in self.players:
+                if p.status == "stay":
+                    while self.hand_value(dealer.hand) < 17:
+                        print("Dealer hits.")
+                        dealer.hand.append(deck.deal())
+                        print(self.print_hand(dealer))
+                        if self.hand_value(dealer.hand) > 21:
+                            dealer.status = "bust"
+                    break                
 
+            # this is a fucking mess...
             for p in self.players:
                 if p.status == "bust":
                     pass
@@ -164,6 +169,11 @@ class Game:
                     else:
                         print(f"{p} beat the dealer!")
                         p.chips += p.bet * 2
+                elif p.status == "blackjack":
+                    if dealer.status == "blackjack":
+                        p.chips += p.bet
+                    else:
+                        p.chips += p.bet * 2.5                        
                 elif dealer.status == "bust":
                     print(f"{p} beat the dealer!")
                     p.chips += p.bet * 2
