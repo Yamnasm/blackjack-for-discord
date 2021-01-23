@@ -1,5 +1,51 @@
-import random
+from   random import shuffle
+from   enum   import Enum
 import time
+
+class Status(Enum):
+    BUST      = -1
+    SURRENDER = 0
+    STAY      = 1
+    BLACKJACK = 2
+
+class Action(Enum):
+    SURRENDER = -1
+    STAY      = 0
+    HIT       = 1
+    DOUBLE    = 2
+    SPLIT     = 3
+
+class Round:
+
+    def __init__(self):
+        pass
+
+    def evaluate(self):
+
+        for p in self.players:
+
+            # bust in any case
+            if  p.status == Status.SURRENDER:
+                p.chips += p.bet / 2
+
+            elif p.status != Status.SURRENDER and p.status != Status.BUST and dealer.status != Status.BUST:
+                
+                if p.status == Status.BLACKJACK:
+                    p.chips += p.bet if dealer.status == Status.BLACKJACK else p.bet * 2
+                elif  p.hand_value() == dealer.hand_value():
+                    p.chips += p.bet
+                else:
+                    p.chips += p.bet * 2
+                    
+            elif dealer.status == Status.BUST:
+                p.chips += p.bet * 2
+        
+            # reset hands and bets
+            p.bet = 0
+            p.hand = []
+        
+        dealer.hand = []
+        
 
 class User:
     def __init__(self, name, chips=1000):
@@ -22,7 +68,7 @@ class Dealer:
 class Deck:
     def __init__(self):
         self.cards = [f"{v}{s}" for s in "♠♣♥♦" for v in [str(i) for i in range(2, 11)] + list("JQKA")]
-        random.shuffle(self.cards)
+        shuffle(self.cards)
     
     def deal(self):
         try:
@@ -32,10 +78,11 @@ class Deck:
             return self.cards.pop()
 
 class Game:
-    def __init__(self, min_bet=100, max_bet=5000):
+    def __init__(self, min_bet=100, max_bet=2000):
         self.min_bet = min_bet
         self.max_bet = max_bet
         self.players = []
+        self.dealer = Dealer()
 
     def __repr__(self):
         return f"Game Started! Min bet: {self.min_bet}. Max bet: {self.max_bet}."    
@@ -43,7 +90,7 @@ class Game:
     def add_players(self, *player:User):
         self.players.extend(player)
     
-    def place_bet(self, player):
+    def place_bet(self, player:User):
         amount = int(input(f"{player} enter a bet: \n"))
         if amount <= self.max_bet and amount >= self.min_bet:
             if amount <= player.chips:
@@ -85,7 +132,90 @@ class Game:
         else:
             bust = ""
         return f"{target} hand: {hand}. Value: {value}.{blackjack}{bust}"
-    
+
+    def output(self):
+        outdict = {self.dealer: self.dealer.hand}
+        for p in self.players:
+            outdict[p] = p.hand
+        return outdict
+        
+    def dealround(self):
+        self.dealer.hand.extend((deck.deal(), deck.deal()))
+
+        for p in self.players:
+            p.hand.extend((deck.deal(), deck.deal()))
+        
+        for p in self.players:
+            if self.hand_value(p.hand) == 21:
+                p.status = "blackjack"
+        return self.output()
+
+    def drawround(self, player:User, action):
+        if action == "surrender" or action == "stay":
+            player.status = action
+
+        if action == "double":
+            player.chips -= player.bet
+            player.bet = player.bet * 2
+            player.hand.append(deck.deal())
+            player.status = "stay"
+
+            if self.hand_value(player.hand) > 21:
+                player.status = "bust"
+
+        if action == "hit":
+            player.hand.append(deck.deal())
+            if self.hand_value(player.hand) > 21:
+                player.status = "bust"
+            elif self.hand_value(player.hand) == 21:
+                player.status = "stay"
+        return self.output()
+
+    def dealer_round(self):
+        while self.hand_value(self.dealer.hand) < 17:
+            self.dealer.hand.append(deck.deal())
+            if self.hand_value(self.dealer.hand) > 21:
+                self.dealer.status = "bust"
+        return self.output()
+        reward_round()
+
+    def reward_round(self):
+        for p in self.players:
+            
+            pass
+
+        # # this is a fucking mess...
+        # for p in self.players:
+        #     if p.status == "bust":
+        #         pass
+        #     elif p.status == "surrender":
+        #         pass
+        #     elif p.status != "surrender" and p.status != "bust" and dealer.status != "bust":
+        #         if self.hand_value(dealer.hand) > self.hand_value(p.hand):
+        #             print(f"{p} lost to the dealer...")
+        #         elif self.hand_value(dealer.hand) == self.hand_value(p.hand):
+        #             print(f"{p} matched the dealer.")
+        #             p.chips += p.bet
+        #         else:
+        #             print(f"{p} beat the dealer!")
+        #             p.chips += p.bet * 2
+        #     elif p.status == "blackjack":
+        #         if dealer.status == "blackjack":
+        #             p.chips += p.bet
+        #         else:
+        #             p.chips += p.bet * 2.5                        
+        #     elif dealer.status == "bust":
+        #         print(f"{p} beat the dealer!")
+        #         p.chips += p.bet * 2
+        #     p.bet = 0 # bet is reset regardless of outcome
+        #     p.hand = []
+        # dealer.hand = []
+
+        # for p in self.players:
+        #     print(f"{p}: chips: {p.chips}")
+        
+
+
     def play(self):
         self.add_players(User("kat"), User("yamn"))
         dealer = Dealer()
@@ -152,7 +282,7 @@ class Game:
                         print(self.print_hand(dealer))
                         if self.hand_value(dealer.hand) > 21:
                             dealer.status = "bust"
-                    break                
+                    break               
 
             # this is a fucking mess...
             for p in self.players:
@@ -190,5 +320,15 @@ class Game:
 if __name__ == "__main__":
     deck = Deck()
     game = Game()
+
+    game.add_players(User("kat"), User("yamn"))
+    for p in game.players:
+        game.place_bet(p)
+
     print(game)
-    game.play()
+
+    print(game.dealround())
+    for p in game.players:
+        print(game.drawround(p, input(f"{p}: surrender, hit, double, stay \n"))[p])
+    print(game.dealer_round())
+
