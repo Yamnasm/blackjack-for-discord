@@ -1,5 +1,12 @@
 import random
-import time
+
+'''/
+This code is for the commandline version of the blackjack bot that was used to learn the game logic
+it probably works, though there are some small things missing
+
+keeping this file to use as reference now.
+
+'''
 
 class User:
     def __init__(self, name, chips=1000):
